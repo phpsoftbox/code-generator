@@ -8,7 +8,6 @@ use PhpSoftBox\CodeGenerator\CodeGenerator;
 use PhpSoftBox\CodeGenerator\FileWriter;
 use RuntimeException;
 
-use function addslashes;
 use function array_filter;
 use function array_key_exists;
 use function array_keys;
@@ -481,8 +480,9 @@ final class OpenApiDtoGenerator
             $properties = [];
         }
 
-        $fields         = [];
-        $usedProperties = [];
+        $fields = [];
+        // `extra` занят параметром конструктора для неизвестных ключей: поле с таким именем получит суффикс.
+        $usedProperties = ['extra' => true];
         [$documentName] = $this->splitInternalSchemaName($schemaName);
         foreach ($properties as $jsonName => $propertySchema) {
             if (!is_string($jsonName) || !is_array($propertySchema)) {
@@ -581,7 +581,7 @@ final class OpenApiDtoGenerator
     ): array {
         $property = $this->propertyName($jsonName);
         $type     = $this->resolvePropertyType($schema, $classNames, $schemaNamespaces, $currentNamespace, $documentName, $options);
-        $access   = '$payload[\'' . addslashes($jsonName) . '\'] ?? null';
+        $access   = '$payload[' . $this->phpString($jsonName) . '] ?? null';
 
         return [
             'jsonName' => $jsonName,
@@ -857,7 +857,7 @@ final class OpenApiDtoGenerator
             return '[]';
         }
 
-        return '[' . implode(', ', array_map(static fn (string $item): string => '\'' . addslashes($item) . '\'', $items)) . ']';
+        return '[' . implode(', ', array_map(fn (string $item): string => $this->phpString($item), $items)) . ']';
     }
 
     /**
@@ -887,7 +887,7 @@ final class OpenApiDtoGenerator
 
         $maxKeyLength = 0;
         foreach (array_keys($map) as $key) {
-            $maxKeyLength = max($maxKeyLength, strlen('\'' . addslashes($key) . '\''));
+            $maxKeyLength = max($maxKeyLength, strlen($this->phpString($key)));
         }
 
         $lines = [
@@ -921,7 +921,7 @@ final class OpenApiDtoGenerator
         $lines[] = '    private const MAP = [';
 
         foreach ($map as $key => $class) {
-            $keyLiteral = '\'' . addslashes($key) . '\'';
+            $keyLiteral = $this->phpString($key);
             $lines[]    = '        '
                 . $keyLiteral
                 . str_repeat(' ', $maxKeyLength - strlen($keyLiteral) + 1)
@@ -942,7 +942,7 @@ final class OpenApiDtoGenerator
                 continue;
             }
 
-            $lines[] = '        \'' . addslashes($this->pathKeyRegex($key)) . '\' => '
+            $lines[] = '        ' . $this->phpString($this->pathKeyRegex($key)) . ' => '
                 . $this->responseMapClassReference($class, $shortNameCounts, $options)
                 . '::class,';
         }
@@ -1003,6 +1003,14 @@ final class OpenApiDtoGenerator
         $pattern = preg_quote($key, '~');
 
         return '~^' . (preg_replace('~\\\\\{[^/]+\\\\\}~', '[^/]+', $pattern) ?? $pattern) . '$~';
+    }
+
+    /**
+     * Строковый литерал PHP в одинарных кавычках: экранируются только `\\` и `'`, остальное попадает как есть.
+     */
+    private function phpString(string $value): string
+    {
+        return '\'' . str_replace(['\\', '\''], ['\\\\', '\\\''], $value) . '\'';
     }
 
     private function classNameFromSchemaName(string $schemaName): string

@@ -22,6 +22,7 @@ use function is_dir;
 use function is_string;
 use function ltrim;
 use function mkdir;
+use function preg_match;
 use function rtrim;
 use function str_contains;
 use function str_ends_with;
@@ -46,7 +47,7 @@ abstract class AbstractMakeCommandHandler implements HandlerInterface
         $baseNamespace = $runner->request()->option('namespace', $this->defaultNamespace());
 
         $target = $this->resolveTarget($name, $basePath, $baseNamespace);
-        if ($target === null) {
+        if ($target === null || !$this->hasValidIdentifiers($target)) {
             $runner->io()->writeln($this->resolveTargetErrorMessage(), 'error');
 
             return Response::FAILURE;
@@ -106,6 +107,23 @@ abstract class AbstractMakeCommandHandler implements HandlerInterface
     abstract protected function successMessage(GeneratorTarget $target): string;
 
     abstract protected function renderEvent(RunnerInterface $runner, GeneratorTarget $target): string;
+
+    /**
+     * Имя класса и namespace попадают в генерируемый код как есть, поэтому допускаются только идентификаторы PHP.
+     */
+    private function hasValidIdentifiers(GeneratorTarget $target): bool
+    {
+        $parts   = $target->namespace === null ? [] : explode('\\', $target->namespace);
+        $parts[] = $target->className;
+
+        foreach ($parts as $part) {
+            if (preg_match('/^[A-Za-z_\\x80-\\xff][A-Za-z0-9_\\x80-\\xff]*$/', $part) !== 1) {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     private function resolveTarget(string $name, mixed $basePath, mixed $baseNamespace): ?GeneratorTarget
     {
