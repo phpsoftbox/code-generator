@@ -278,6 +278,47 @@ final class OpenApiDtoGeneratorTest extends TestCase
         self::assertSame('fallback', $dtoClass::fromArray(['result' => 'fallback'])->result);
     }
 
+    /**
+     * Поле JSON с именем extra не конфликтует с параметром конструктора для неизвестных ключей.
+     *
+     * @see OpenApiDtoGenerator::generate()
+     */
+    #[Test]
+    public function extraFieldDoesNotCollideWithExtraParameter(): void
+    {
+        $dtoClass = $this->generateResponseDto('ExtraField', [
+            '200' => ['content' => ['application/json' => ['schema' => ['type' => 'object', 'properties' => ['extra' => ['type' => 'string']]]]]],
+        ]);
+
+        $dto = $dtoClass::fromArray(['extra' => 'value', 'future' => true]);
+
+        // Поле получает суффикс, а $extra по-прежнему собирает неописанные ключи.
+        self::assertSame('value', $dto->extra2);
+        self::assertSame(['future' => true], $dto->extra);
+    }
+
+    /**
+     * Ключи JSON с кавычками и обратной косой чертой попадают в сгенерированный код без искажений.
+     *
+     * @see OpenApiDtoGenerator::generate()
+     */
+    #[Test]
+    public function jsonKeysWithQuotesAreHydrated(): void
+    {
+        $dtoClass = $this->generateResponseDto('QuotedKeys', [
+            '200' => ['content' => ['application/json' => ['schema' => ['type' => 'object', 'properties' => [
+                'double"quote'    => ['type' => 'string'],
+                'single\'quote\\' => ['type' => 'string'],
+            ]]]]],
+        ]);
+
+        $dto = $dtoClass::fromArray(['double"quote' => 'a', 'single\'quote\\' => 'b']);
+
+        self::assertSame('a', $dto->doubleQuote);
+        self::assertSame('b', $dto->singleQuote);
+        self::assertSame([], $dto->extra);
+    }
+
     /** @return iterable<string, array{string, array}> */
     public static function nonJsonSuccessResponses(): iterable
     {
