@@ -7,6 +7,10 @@ namespace PhpSoftBox\CodeGenerator\Tests;
 use PhpSoftBox\CodeGenerator\OpenApi\OpenApiDtoGenerator;
 use PhpSoftBox\CodeGenerator\OpenApi\OpenApiDtoGeneratorDocument;
 use PhpSoftBox\CodeGenerator\OpenApi\OpenApiDtoGeneratorOptions;
+use PhpSoftBox\CodeGenerator\Tests\Generated\Partner\Orders\GetOrderResponse;
+use PhpSoftBox\CodeGenerator\Tests\Generated\TestResponseDtoMap;
+use PhpSoftBox\CodeGenerator\Tests\GeneratedDuplicate\Alpha\Api\Error;
+use PhpSoftBox\CodeGenerator\Tests\GeneratedDuplicate\TestDuplicateResponseDtoMap;
 use PhpSoftBox\CodeGenerator\Tests\Support\TestDtoInterface;
 use PhpSoftBox\CodeGenerator\Tests\Support\TestDtoValue;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -113,8 +117,8 @@ final class OpenApiDtoGeneratorTest extends TestCase
         require_once $dtoFile;
         require_once $dir . '/Dto/TestResponseDtoMap.php';
 
-        $dtoClass = \PhpSoftBox\CodeGenerator\Tests\Generated\TestResponseDtoMap::resolve('GET', '/v2/orders/123');
-        self::assertSame(\PhpSoftBox\CodeGenerator\Tests\Generated\Partner\Orders\GetOrderResponse::class, $dtoClass);
+        $dtoClass = TestResponseDtoMap::resolve('GET', '/v2/orders/123');
+        self::assertSame(GetOrderResponse::class, $dtoClass);
 
         $dto = $dtoClass::fromArray(['orderId' => 123, 'status' => 'PROCESSING']);
         self::assertSame(123, $dto->orderId);
@@ -158,12 +162,12 @@ final class OpenApiDtoGeneratorTest extends TestCase
         require_once $dir . '/Dto/TestDuplicateResponseDtoMap.php';
 
         self::assertSame(
-            \PhpSoftBox\CodeGenerator\Tests\GeneratedDuplicate\Alpha\Api\Error::class,
-            \PhpSoftBox\CodeGenerator\Tests\GeneratedDuplicate\TestDuplicateResponseDtoMap::resolve('GET', '/api/alpha'),
+            Error::class,
+            TestDuplicateResponseDtoMap::resolve('GET', '/api/alpha'),
         );
         self::assertSame(
-            \PhpSoftBox\CodeGenerator\Tests\GeneratedDuplicate\Beta\Api\Error::class,
-            \PhpSoftBox\CodeGenerator\Tests\GeneratedDuplicate\TestDuplicateResponseDtoMap::resolve('GET', '/api/beta'),
+            GeneratedDuplicate\Beta\Api\Error::class,
+            TestDuplicateResponseDtoMap::resolve('GET', '/api/beta'),
         );
     }
 
